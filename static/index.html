@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>IAM Sentinel · Cloud Identity Risk</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='6' fill='%23f43f5e'/%3E%3Cpath d='M12 4l6 2.5v4.5c0 4-2.6 7.2-6 8.7-3.4-1.5-6-4.7-6-8.7V6.5L12 4z' fill='none' stroke='white' stroke-width='2'/%3E%3C/svg%3E">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <!-- vendored locally so the dashboard works fully offline (Tailwind Play CDN 3.4.5, Cytoscape.js 3.28.1) -->
@@ -42,6 +43,7 @@
         <div class="font-extrabold tracking-tight text-lg leading-none">IAM Sentinel</div>
         <div class="text-[11px] text-slate-400 leading-tight">PS-07 · Cloud Identity &amp; Excessive Permission Detection</div>
       </div>
+      <span id="modePill" class="hidden ml-3 sm:inline-flex items-center text-[11px] bg-emerald-900/40 border border-emerald-700/60 text-emerald-200 rounded-full px-2.5 py-1">mode</span>
       <span id="sourcePill" class="ml-3 hidden sm:inline-flex items-center gap-1.5 text-xs bg-ink-700 border border-ink-600 rounded-full px-3 py-1 font-mono text-slate-300">loading…</span>
     </div>
     <div class="flex flex-wrap items-center gap-2 text-sm">
@@ -164,6 +166,8 @@
   <div class="flex items-center gap-3 text-slate-300"><span class="spinner"></span> Analysing IAM snapshot…</div>
 </div>
 
+<script src="/static/catalog.js"></script>
+<script src="/static/analyzer.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

@@ -33,30 +33,96 @@ function download(name, text, mime = 'application/json') {
   setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 
-/* ---------------------------------------------------------------- data loading */
+/* ---------------------------------------------------------------- data loading
+ * Two modes, same UI:
+ *  - server: FastAPI backend (python main.py) - /api/analysis, /api/analyze, /api/report
+ *  - static: no backend (GitHub Pages) - samples come pre-computed from ./data/default-scan.json,
+ *            uploads and exports run in the browser engine (analyzer.js, a port of the Python engine).
+ * URLs are relative so the site also works under a sub-path such as /IAM-Sentinel/. */
+const MODE = { kind: null, bundle: null };
+async function detectMode() {
+  if (MODE.kind) return MODE.kind;
+  if (document.querySelector('meta[name="iam-sentinel-mode"]')?.content === 'static') return (MODE.kind = 'static');
+  try {
+    const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 2500);
+    const res = await fetch('api/health', { signal: ctl.signal, cache: 'no-store' });
+    clearTimeout(t);
+    MODE.kind = res.ok && (res.headers.get('content-type') || '').includes('json') ? 'server' : 'static';
+  } catch { MODE.kind = 'static'; }
+  return MODE.kind;
+}
+async function staticBundle() {
+  if (!MODE.bundle) {
+    const res = await fetch('data/default-scan.json');
+    if (!res.ok) throw new Error(`data/default-scan.json: ${res.status} ${res.statusText}`);
+    MODE.bundle = await res.json();
+  }
+  return MODE.bundle;
+}
+function showMode() {
+  const pill = $('#modePill');
+  if (!pill) return;
+  pill.textContent = MODE.kind === 'static' ? 'static · in-browser engine' : 'live · API server';
+  pill.title = MODE.kind === 'static'
+    ? 'No backend: samples are pre-computed, uploads and exports are analysed locally in your browser (nothing is uploaded anywhere).'
+    : 'Connected to the IAM Sentinel FastAPI backend.';
+  pill.classList.remove('hidden');
+}
 async function loadSample(id) {
   loading(true);
   try {
-    const res = await fetch(`/api/analysis?sample=${encodeURIComponent(id)}`);
-    if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
-    render(await res.json());
+    let result;
+    if ((await detectMode()) === 'server') {
+      const res = await fetch(`api/analysis?sample=${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error((await res.json()).detail || res.statusText);
+      result = await res.json();
+    } else {
+      const b = await staticBundle();
+      result = b.samples[id] || b.samples[b.default_sample];
+      if (!result) throw new Error(`sample '${id}' not in data/default-scan.json`);
+      result = JSON.parse(JSON.stringify(result)); // render() annotates the object; keep the cached copy pristine
+    }
+    showMode();
+    render(result);
     $$('.sample-btn').forEach((b) => b.classList.toggle('active-sample', b.dataset.sample === id));
   } catch (e) { toast(`Load failed: ${e.message}`, 'error'); }
   finally { loading(false); }
+}
+async function analyseLocally(file) {
+  if (!window.IAMSentinel) throw new Error('in-browser engine (analyzer.js) failed to load');
+  let data;
+  try { data = JSON.parse((await file.text()).replace(/^﻿/, '')); }
+  catch (e) { throw new Error(`Not valid JSON: ${e.message}`); }
+  await new Promise((r) => setTimeout(r, 30)); // let the spinner paint before the synchronous analysis
+  return window.IAMSentinel.analyze(data, { source: file.name || 'upload.json' });
 }
 async function uploadFile(file) {
   if (!file) return;
   loading(true);
   try {
-    const fd = new FormData(); fd.append('file', file);
-    const res = await fetch('/api/analyze', { method: 'POST', body: fd });
-    const body = await res.json();
-    if (!res.ok) throw new Error(body.detail || res.statusText);
+    let body;
+    if ((await detectMode()) === 'server') {
+      const fd = new FormData(); fd.append('file', file);
+      const res = await fetch('api/analyze', { method: 'POST', body: fd });
+      body = await res.json();
+      if (!res.ok) throw new Error(body.detail || res.statusText);
+    } else {
+      body = await analyseLocally(file);
+    }
     render(body);
     $$('.sample-btn').forEach((b) => b.classList.remove('active-sample'));
-    toast(`Analysed ${file.name}: ${body.summary.findings_total} findings`);
+    toast(`Analysed ${file.name}: ${body.summary.findings_total} findings${MODE.kind === 'static' ? ' (in your browser)' : ''}`);
   } catch (e) { toast(`Upload failed: ${e.message}`, 'error'); }
   finally { loading(false); }
+}
+function exportReport(fmt) {
+  if (!S.r) return;
+  if (MODE.kind === 'server' && S.r.meta.engine !== 'browser') {
+    window.location = `api/report/${S.r.meta.analysis_id}.${fmt}`;
+    return;
+  }
+  const [fn, mime] = window.IAMSentinel.EXPORTERS[fmt];
+  download(`iam-sentinel-${S.r.meta.account_id}.${fmt === 'sarif' ? 'sarif.json' : fmt}`, fn(S.r), mime);
 }
 
 /* ---------------------------------------------------------------- render root */
@@ -484,10 +550,7 @@ document.addEventListener('DOMContentLoaded', () => {
   ['input', 'change'].forEach((ev) => ['#searchBox', '#catFilter', '#expFilter'].forEach((q) => $(q).addEventListener(ev, renderFindings)));
   $('#exportBtn').addEventListener('click', (e) => { e.stopPropagation(); $('#exportMenu').classList.toggle('hidden'); });
   document.addEventListener('click', () => $('#exportMenu').classList.add('hidden'));
-  $$('.export-link[data-fmt]').forEach((a) => a.addEventListener('click', () => {
-    if (!S.r) return;
-    window.location = `/api/report/${S.r.meta.analysis_id}.${a.dataset.fmt}`;
-  }));
+  $$('.export-link[data-fmt]').forEach((a) => a.addEventListener('click', () => exportReport(a.dataset.fmt)));
   $('#applyScript').addEventListener('click', applyScript);
   $('#drawerBack').addEventListener('click', closeDrawer);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDrawer(); });

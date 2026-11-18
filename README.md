@@ -2,9 +2,10 @@
 
 IAM Sentinel reads an AWS IAM export. It finds **excessive permissions, risky trust relationships, privilege-escalation chains and dormant identities**, turns them into an **attack graph with blast-radius scores**, and generates a **verified least-privilege policy and the AWS CLI commands to apply it** for every finding.
 
-It runs in two modes from one codebase:
+It runs in three modes from one codebase:
 
 * **Web dashboard**: an interactive attack graph, an evidence drawer, side-by-side policy diffs and one-click report export.
+* **Zero-backend hosted dashboard**: the same UI on GitHub Pages at **https://farah-adam.github.io/IAM-Sentinel/**. Samples are pre-computed, and uploaded files are analysed by an in-browser engine. Nothing leaves the browser.
 * **CLI / CI-CD gate**: `--fail-on HIGH` returns non-zero exit codes and writes SARIF, JSON, Markdown or HTML.
 
 ---
@@ -26,7 +27,8 @@ python cli.py scan iam-small.json -f html -o report.html --also md=report.md --a
 python cli.py scan iam-small.json --write-remediations remediation/   # fixed JSON policies + apply.sh
 python cli.py serve --file my-export.json --port 9000           # dashboard on another export
 python cli.py collect --profile audit -o export.json            # live read-only AWS snapshot (boto3)
-python -m pytest -q                                             # 48 unit / integration tests
+python -m pytest -q                                             # 54 tests (incl. browser-engine parity)
+python tools/build_pages.py                                     # rebuild the GitHub Pages site in docs/
 ```
 
 Exit codes: `0` = pass, `1` = findings at or above `--fail-on`, `2` = bad input or usage. A ready-made GitHub Actions gate is in `.github/workflows/iam-sentinel.yml`.
@@ -37,6 +39,22 @@ Exit codes: `0` = pass, `1` = findings at or above `--fail-on`, `2` = bad input 
 * or a single bare policy document, which is linted as an inline policy
 
 The dashboard's JS libraries (Tailwind, Cytoscape.js) are **vendored in `static/vendor/`**, so the demo works offline.
+
+### 🌐 GitHub Pages (no server)
+
+`docs/` is a fully static build of the dashboard:
+
+```bash
+python tools/build_pages.py      # regenerate static/catalog.js, copy the dashboard to docs/, pre-compute scans
+```
+
+* **On load** the dashboard reads `./data/default-scan.json`. This holds the full Python-engine analysis of `iam-small.json` and `samples/iam-multihop-demo.json`: graph, posture grade, findings, blast radius and remediation diffs. The page is fully interactive immediately.
+* **Uploads and drag-and-drop** run `analyzer.js`, a dependency-free JavaScript port of the engine. It covers deny-aware evaluation, all detectors, the attack graph, blast radius, the self-verifying least-privilege synthesizer and the HTML/MD/JSON/SARIF exporters. The file is analysed locally and is never uploaded anywhere.
+* **The two engines agree exactly.** `tests/test_pages.py` runs the browser engine under Node and asserts its output matches the Python engine field for field on both datasets, including findings, paths, blast radius, proposed policies, diffs and generated ExternalIds. It also checks that `docs/` is in sync with `static/`.
+* **Mode detection:** `docs/index.html` carries `<meta name="iam-sentinel-mode" content="static">`. Served by `python main.py`, the same `app.js` finds the API and uses it instead. A header pill shows which mode is active.
+* **Relative paths:** every asset and data URL is relative (`./app.js`, `./vendor/…`, `data/…`), so it works under the `/IAM-Sentinel/` sub-path.
+
+To publish: push the repo to `github.com/farah-adam/IAM-Sentinel`. Then, under **Settings → Pages → Build and deployment**, choose *Deploy from a branch*, `main`, folder `/docs`. `docs/.nojekyll` disables Jekyll processing.
 
 ---
 
@@ -53,6 +71,8 @@ flowchart LR
   F --> H[engine.py → result JSON]
   G --> H
   H --> I[FastAPI server.py<br/>dashboard + REST]
+  H --> K[tools/build_pages.py<br/>docs/data/default-scan.json]
+  K --> L[GitHub Pages dashboard<br/>analyzer.js in-browser engine<br/>for uploads]
   H --> J[cli.py<br/>table · JSON · SARIF · MD · HTML<br/>--fail-on gate]
 ```
 
@@ -67,6 +87,10 @@ iamsentinel/
   reports.py      JSON / SARIF / Markdown / HTML   engine.py        orchestration + posture grade
   server.py       FastAPI API + dashboard          collector.py     optional live AWS collector
 static/           dashboard (index.html, app.js, app.css, vendor/)
+  analyzer.js     in-browser engine: JavaScript port of iamsentinel/ (same result schema)
+  catalog.js      GENERATED from catalog.py by tools/build_pages.py (shared knowledge base)
+docs/             GitHub Pages build (static copy + data/default-scan.json) - generated, do not edit
+tools/            build_pages.py (Pages build) · js_analyze.js (run the browser engine under Node)
 tests/            pytest suite (evaluator, every iam-small flaw, trust, privesc, stale, remediation, CLI, API)
 reports/          pre-generated reports + remediation/ (JSON policies + apply.sh) for iam-small.json
 ```
@@ -299,3 +323,4 @@ The collector keeps only the AWS-managed policies that are actually attached. Wi
 * **No usage-based policy generation.** Without CloudTrail / Access Advisor data, the synthesizer uses curated action sets and `<PLACEHOLDER>` ARNs. For usage-based trimming, combine it with IAM Access Analyzer policy generation.
 * **Fixed escalation catalogue.** The 23 escalation methods do not cover every service-specific technique, and new AWS APIs need catalogue updates in `catalog.py`.
 * **Single account only.** Cross-account role chaining into *other* accounts is shown as an external node, not traversed.
+* **Hosted (GitHub Pages) mode has no live AWS collection or server-side report cache.** Exports are generated in the browser instead. The in-browser analysis is synchronous: a 27 MB, 240-identity export takes about 4 s, and the tab pauses during that time. The pre-computed `default-scan.json` reflects the date it was built, so time-based checks such as "created < 24 h ago" age until you re-run `tools/build_pages.py`.
