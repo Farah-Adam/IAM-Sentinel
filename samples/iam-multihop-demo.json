@@ -1,0 +1,225 @@
+{
+  "_comment": "Synthetic GetAccountAuthorizationDetails export (account 111122223333) built to demonstrate multi-hop attack paths, cross-account/OIDC trust risks, deny-aware evaluation and stale credentials. Not real data.",
+  "UserDetailList": [
+    {
+      "Path": "/", "UserName": "alice-dev", "UserId": "AIDAEXAMPLEALICE0001",
+      "Arn": "arn:aws:iam::111122223333:user/alice-dev", "CreateDate": "2025-03-02T09:00:00+00:00",
+      "GroupList": ["developers"], "AttachedManagedPolicies": [], "Tags": []
+    },
+    {
+      "Path": "/", "UserName": "bob-intern", "UserId": "AIDAEXAMPLEBOB000001",
+      "Arn": "arn:aws:iam::111122223333:user/bob-intern", "CreateDate": "2026-06-10T09:00:00+00:00",
+      "GroupList": [], "AttachedManagedPolicies": [], "Tags": [],
+      "UserPolicyList": [{
+        "PolicyName": "intern-helpdesk",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "HelpdeskGroupMgmt", "Effect": "Allow", "Action": ["iam:AddUserToGroup", "iam:ListGroups", "iam:GetGroup"], "Resource": "*"}
+        ]}
+      }]
+    },
+    {
+      "Path": "/", "UserName": "guarded-ops", "UserId": "AIDAEXAMPLEGUARD0001",
+      "Arn": "arn:aws:iam::111122223333:user/guarded-ops", "CreateDate": "2025-01-15T09:00:00+00:00",
+      "GroupList": [], "AttachedManagedPolicies": [], "Tags": [],
+      "UserPolicyList": [{
+        "PolicyName": "ops-with-guardrails",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "LegacyBroadS3", "Effect": "Allow", "Action": "s3:*", "Resource": "*"},
+          {"Sid": "DescribeEc2", "Effect": "Allow", "Action": "ec2:Describe*", "Resource": "*"},
+          {"Sid": "HardDenyS3", "Effect": "Deny", "Action": "s3:*", "Resource": "*"}
+        ]}
+      }]
+    },
+    {
+      "Path": "/", "UserName": "break-glass", "UserId": "AIDAEXAMPLEBREAK0001",
+      "Arn": "arn:aws:iam::111122223333:user/break-glass", "CreateDate": "2024-05-01T09:00:00+00:00",
+      "GroupList": [], "AttachedManagedPolicies": [], "Tags": [{"Key": "purpose", "Value": "emergency"}],
+      "UserPolicyList": [{
+        "PolicyName": "mfa-admin",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "AdminWithMFA", "Effect": "Allow", "Action": "*", "Resource": "*", "Condition": {"Bool": {"aws:MultiFactorAuthPresent": "true"}}}
+        ]}
+      }]
+    },
+    {
+      "Path": "/", "UserName": "legacy-reporting", "UserId": "AIDAEXAMPLELEGACY001",
+      "Arn": "arn:aws:iam::111122223333:user/legacy-reporting", "CreateDate": "2023-02-01T09:00:00+00:00",
+      "GroupList": [], "Tags": [],
+      "AttachedManagedPolicies": [{"PolicyName": "LegacyReportsRead", "PolicyArn": "arn:aws:iam::111122223333:policy/LegacyReportsRead"}]
+    }
+  ],
+  "GroupDetailList": [
+    {
+      "Path": "/", "GroupName": "developers", "GroupId": "AGPAEXAMPLEDEV000001",
+      "Arn": "arn:aws:iam::111122223333:group/developers", "CreateDate": "2024-01-01T00:00:00+00:00",
+      "AttachedManagedPolicies": [],
+      "GroupPolicyList": [{
+        "PolicyName": "dev-assume-deploy-roles",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "AssumeDeployRoles", "Effect": "Allow", "Action": "sts:AssumeRole", "Resource": "arn:aws:iam::111122223333:role/deploy-*"},
+          {"Sid": "ReadLogs", "Effect": "Allow", "Action": ["logs:DescribeLogGroups", "logs:GetLogEvents"], "Resource": "arn:aws:logs:*:111122223333:log-group:/app/*"}
+        ]}
+      }]
+    },
+    {
+      "Path": "/", "GroupName": "platform-admins", "GroupId": "AGPAEXAMPLEADM000001",
+      "Arn": "arn:aws:iam::111122223333:group/platform-admins", "CreateDate": "2024-01-01T00:00:00+00:00",
+      "GroupPolicyList": [],
+      "AttachedManagedPolicies": [{"PolicyName": "AdministratorAccess", "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"}]
+    }
+  ],
+  "RoleDetailList": [
+    {
+      "Path": "/", "RoleName": "deploy-pipeline", "RoleId": "AROAEXAMPLEDEPLOY001",
+      "Arn": "arn:aws:iam::111122223333:role/deploy-pipeline", "CreateDate": "2025-01-10T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::111122223333:root"}, "Action": "sts:AssumeRole"}
+      ]},
+      "InstanceProfileList": [], "RolePolicyList": [], "Tags": [],
+      "AttachedManagedPolicies": [{"PolicyName": "DeployPipelinePolicy", "PolicyArn": "arn:aws:iam::111122223333:policy/DeployPipelinePolicy"}],
+      "RoleLastUsed": {"LastUsedDate": "2026-11-16T10:00:00+00:00", "Region": "eu-west-1"}
+    },
+    {
+      "Path": "/", "RoleName": "vendor-monitoring", "RoleId": "AROAEXAMPLEVENDOR001",
+      "Arn": "arn:aws:iam::111122223333:role/vendor-monitoring", "CreateDate": "2025-04-01T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Sid": "VendorAccount", "Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::999988887777:root"}, "Action": "sts:AssumeRole"}
+      ]},
+      "InstanceProfileList": [], "Tags": [], "AttachedManagedPolicies": [],
+      "RolePolicyList": [{
+        "PolicyName": "vendor-read",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "ReadEverything", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket", "secretsmanager:GetSecretValue", "cloudwatch:GetMetricData"], "Resource": "*"}
+        ]}
+      }],
+      "RoleLastUsed": {"LastUsedDate": "2026-11-17T02:00:00+00:00", "Region": "us-east-1"}
+    },
+    {
+      "Path": "/", "RoleName": "partner-audit", "RoleId": "AROAEXAMPLEPARTNER01",
+      "Arn": "arn:aws:iam::111122223333:role/partner-audit", "CreateDate": "2025-04-01T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "Principal": {"AWS": "arn:aws:iam::444455556666:role/AuditCollector"}, "Action": "sts:AssumeRole",
+         "Condition": {"StringEquals": {"sts:ExternalId": "c0ffee-7f3a-4bd2-9e51-partner"}}}
+      ]},
+      "InstanceProfileList": [], "Tags": [], "RolePolicyList": [],
+      "AttachedManagedPolicies": [{"PolicyName": "SecurityAuditLite", "PolicyArn": "arn:aws:iam::111122223333:policy/SecurityAuditLite"}],
+      "RoleLastUsed": {"LastUsedDate": "2026-11-01T00:00:00+00:00", "Region": "us-east-1"}
+    },
+    {
+      "Path": "/", "RoleName": "public-debug-role", "RoleId": "AROAEXAMPLEPUBLIC001",
+      "Arn": "arn:aws:iam::111122223333:role/public-debug-role", "CreateDate": "2026-09-01T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Sid": "TemporaryDebug", "Effect": "Allow", "Principal": {"AWS": "*"}, "Action": "sts:AssumeRole"}
+      ]},
+      "InstanceProfileList": [], "Tags": [], "AttachedManagedPolicies": [],
+      "RolePolicyList": [{
+        "PolicyName": "debug",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "DebugLambda", "Effect": "Allow", "Action": ["lambda:InvokeFunction", "lambda:GetFunction", "logs:FilterLogEvents"], "Resource": "*"}
+        ]}
+      }],
+      "RoleLastUsed": {}
+    },
+    {
+      "Path": "/", "RoleName": "github-actions-deploy", "RoleId": "AROAEXAMPLEGITHUB001",
+      "Arn": "arn:aws:iam::111122223333:role/github-actions-deploy", "CreateDate": "2025-08-01T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "Principal": {"Federated": "arn:aws:iam::111122223333:oidc-provider/token.actions.githubusercontent.com"},
+         "Action": "sts:AssumeRoleWithWebIdentity",
+         "Condition": {"StringEquals": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"}}}
+      ]},
+      "InstanceProfileList": [], "Tags": [], "RolePolicyList": [],
+      "AttachedManagedPolicies": [{"PolicyName": "PowerUserAccess", "PolicyArn": "arn:aws:iam::aws:policy/PowerUserAccess"}],
+      "RoleLastUsed": {"LastUsedDate": "2026-11-15T00:00:00+00:00", "Region": "us-east-1"}
+    },
+    {
+      "Path": "/", "RoleName": "batch-worker", "RoleId": "AROAEXAMPLEBATCH0001",
+      "Arn": "arn:aws:iam::111122223333:role/batch-worker", "CreateDate": "2024-02-01T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}
+      ]},
+      "InstanceProfileList": [{"InstanceProfileName": "batch-worker", "Arn": "arn:aws:iam::111122223333:instance-profile/batch-worker"}],
+      "Tags": [], "AttachedManagedPolicies": [],
+      "RolePolicyList": [{
+        "PolicyName": "batch-launch",
+        "PolicyDocument": {"Version": "2012-10-17", "Statement": [
+          {"Sid": "LaunchWorkers", "Effect": "Allow", "Action": ["ec2:RunInstances", "iam:PassRole", "ec2:Describe*"], "Resource": "*"}
+        ]}
+      }],
+      "RoleLastUsed": {"LastUsedDate": "2026-11-10T00:00:00+00:00", "Region": "us-east-1"}
+    },
+    {
+      "Path": "/", "RoleName": "ec2-admin-legacy", "RoleId": "AROAEXAMPLEEC2ADM001",
+      "Arn": "arn:aws:iam::111122223333:role/ec2-admin-legacy", "CreateDate": "2023-06-01T00:00:00+00:00",
+      "AssumeRolePolicyDocument": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}
+      ]},
+      "InstanceProfileList": [{"InstanceProfileName": "ec2-admin-legacy", "Arn": "arn:aws:iam::111122223333:instance-profile/ec2-admin-legacy"}],
+      "Tags": [], "RolePolicyList": [],
+      "AttachedManagedPolicies": [{"PolicyName": "AdministratorAccess", "PolicyArn": "arn:aws:iam::aws:policy/AdministratorAccess"}],
+      "RoleLastUsed": {"LastUsedDate": "2026-03-20T00:00:00+00:00", "Region": "us-east-1"}
+    }
+  ],
+  "Policies": [
+    {
+      "PolicyName": "AdministratorAccess", "PolicyId": "ANPAIWMBCKSKIEE64ZLYK", "Arn": "arn:aws:iam::aws:policy/AdministratorAccess",
+      "Path": "/", "DefaultVersionId": "v1", "AttachmentCount": 2, "IsAttachable": true,
+      "PolicyVersionList": [{"Document": {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}, "VersionId": "v1", "IsDefaultVersion": true}]
+    },
+    {
+      "PolicyName": "PowerUserAccess", "PolicyId": "ANPAJYRXTHIB4FOVS3ZXS", "Arn": "arn:aws:iam::aws:policy/PowerUserAccess",
+      "Path": "/", "DefaultVersionId": "v5", "AttachmentCount": 1, "IsAttachable": true,
+      "PolicyVersionList": [{"Document": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "NotAction": ["iam:*", "organizations:*", "account:*"], "Resource": "*"},
+        {"Effect": "Allow", "Action": ["iam:CreateServiceLinkedRole", "iam:DeleteServiceLinkedRole", "iam:ListRoles", "organizations:DescribeOrganization", "account:ListRegions"], "Resource": "*"}
+      ]}, "VersionId": "v5", "IsDefaultVersion": true}]
+    },
+    {
+      "PolicyName": "DeployPipelinePolicy", "PolicyId": "ANPAEXAMPLEDEPLOY001", "Arn": "arn:aws:iam::111122223333:policy/DeployPipelinePolicy",
+      "Path": "/", "DefaultVersionId": "v3", "AttachmentCount": 1, "IsAttachable": true,
+      "PolicyVersionList": [{"Document": {"Version": "2012-10-17", "Statement": [
+        {"Sid": "Stacks", "Effect": "Allow", "Action": ["cloudformation:CreateStack", "cloudformation:UpdateStack", "cloudformation:DescribeStacks"], "Resource": "arn:aws:cloudformation:*:111122223333:stack/app-*/*"},
+        {"Sid": "SelfServicePolicyUpdates", "Effect": "Allow", "Action": ["iam:CreatePolicyVersion", "iam:GetPolicyVersion"], "Resource": "arn:aws:iam::111122223333:policy/DeployPipelinePolicy"},
+        {"Sid": "Artifacts", "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject"], "Resource": "arn:aws:s3:::app-artifacts-111122223333/*"}
+      ]}, "VersionId": "v3", "IsDefaultVersion": true}]
+    },
+    {
+      "PolicyName": "LegacyReportsRead", "PolicyId": "ANPAEXAMPLELEGACY001", "Arn": "arn:aws:iam::111122223333:policy/LegacyReportsRead",
+      "Path": "/", "DefaultVersionId": "v1", "AttachmentCount": 1, "IsAttachable": true,
+      "PolicyVersionList": [{"Document": {"Version": "2012-10-17", "Statement": [
+        {"Sid": "Reports", "Effect": "Allow", "Action": ["s3:GetObject", "s3:ListBucket"], "Resource": ["arn:aws:s3:::finance-reports", "arn:aws:s3:::finance-reports/*"]}
+      ]}, "VersionId": "v1", "IsDefaultVersion": true}]
+    },
+    {
+      "PolicyName": "SecurityAuditLite", "PolicyId": "ANPAEXAMPLEAUDIT0001", "Arn": "arn:aws:iam::111122223333:policy/SecurityAuditLite",
+      "Path": "/", "DefaultVersionId": "v1", "AttachmentCount": 1, "IsAttachable": true,
+      "PolicyVersionList": [{"Document": {"Version": "2012-10-17", "Statement": [
+        {"Sid": "Audit", "Effect": "Allow", "Action": ["iam:Get*", "iam:List*", "cloudtrail:DescribeTrails", "config:Describe*"], "Resource": "*"}
+      ]}, "VersionId": "v1", "IsDefaultVersion": true}]
+    },
+    {
+      "PolicyName": "UnusedFullS3", "PolicyId": "ANPAEXAMPLEUNUSED001", "Arn": "arn:aws:iam::111122223333:policy/UnusedFullS3",
+      "Path": "/", "DefaultVersionId": "v1", "AttachmentCount": 0, "IsAttachable": true,
+      "PolicyVersionList": [{"Document": {"Version": "2012-10-17", "Statement": [
+        {"Effect": "Allow", "Action": "s3:*", "Resource": "*"}
+      ]}, "VersionId": "v1", "IsDefaultVersion": true}]
+    }
+  ],
+  "CredentialReport": [
+    {"user": "alice-dev", "password_enabled": "true", "password_last_used": "2026-11-17T08:00:00+00:00", "mfa_active": "true",
+     "access_key_1_active": "false", "access_key_1_last_rotated": "N/A", "access_key_1_last_used_date": "N/A",
+     "access_key_2_active": "false", "access_key_2_last_rotated": "N/A", "access_key_2_last_used_date": "N/A"},
+    {"user": "bob-intern", "password_enabled": "true", "password_last_used": "2026-11-12T08:00:00+00:00", "mfa_active": "false",
+     "access_key_1_active": "true", "access_key_1_last_rotated": "2026-06-10T09:05:00+00:00", "access_key_1_last_used_date": "2026-11-12T09:00:00+00:00",
+     "access_key_2_active": "false", "access_key_2_last_rotated": "N/A", "access_key_2_last_used_date": "N/A"},
+    {"user": "guarded-ops", "password_enabled": "false", "password_last_used": "N/A", "mfa_active": "false",
+     "access_key_1_active": "true", "access_key_1_last_rotated": "2026-10-01T00:00:00+00:00", "access_key_1_last_used_date": "2026-11-17T00:00:00+00:00",
+     "access_key_2_active": "false", "access_key_2_last_rotated": "N/A", "access_key_2_last_used_date": "N/A"},
+    {"user": "break-glass", "password_enabled": "true", "password_last_used": "2026-02-01T00:00:00+00:00", "mfa_active": "true",
+     "access_key_1_active": "false", "access_key_1_last_rotated": "N/A", "access_key_1_last_used_date": "N/A",
+     "access_key_2_active": "false", "access_key_2_last_rotated": "N/A", "access_key_2_last_used_date": "N/A"},
+    {"user": "legacy-reporting", "password_enabled": "false", "password_last_used": "N/A", "mfa_active": "false",
+     "access_key_1_active": "true", "access_key_1_last_rotated": "2023-02-01T09:10:00+00:00", "access_key_1_last_used_date": "2025-01-10T00:00:00+00:00",
+     "access_key_2_active": "true", "access_key_2_last_rotated": "2024-07-01T00:00:00+00:00", "access_key_2_last_used_date": "N/A"}
+  ]
+}

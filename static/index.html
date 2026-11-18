@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IAM Sentinel · Cloud Identity Risk</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <!-- vendored locally so the dashboard works fully offline (Tailwind Play CDN 3.4.5, Cytoscape.js 3.28.1) -->
+  <script src="/static/vendor/tailwind.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: { extend: {
+        fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'], mono: ['JetBrains Mono', 'ui-monospace', 'monospace'] },
+        colors: { ink: { 950: '#070b16', 900: '#0b1020', 850: '#0f1629', 800: '#121a2f', 700: '#1a2440', 600: '#24304f', 500: '#3a4a70' } }
+      } }
+    }
+  </script>
+  <script src="/static/vendor/cytoscape.min.js"></script>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body class="bg-ink-900 text-slate-200 font-sans antialiased min-h-screen">
+
+<!-- drag & drop overlay -->
+<div id="dropOverlay" class="hidden fixed inset-0 z-50 bg-ink-950/90 backdrop-blur flex items-center justify-center">
+  <div class="border-2 border-dashed border-sky-400 rounded-3xl px-16 py-12 text-center">
+    <div class="text-5xl mb-3">⤓</div>
+    <div class="text-xl font-semibold">Drop an AWS IAM JSON export</div>
+    <div class="text-slate-400 text-sm mt-1">get-account-authorization-details output, or a single policy document</div>
+  </div>
+</div>
+
+<!-- header -->
+<header class="sticky top-0 z-40 bg-ink-900/85 backdrop-blur border-b border-ink-600">
+  <div class="max-w-[1600px] mx-auto px-4 py-3 flex flex-wrap items-center gap-3">
+    <div class="flex items-center gap-3 mr-auto">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-rose-500 to-orange-400 grid place-items-center shadow-lg shadow-rose-900/40">
+        <svg viewBox="0 0 24 24" class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6l7-3z"/><path d="M9 12l2 2 4-4"/></svg>
+      </div>
+      <div>
+        <div class="font-extrabold tracking-tight text-lg leading-none">IAM Sentinel</div>
+        <div class="text-[11px] text-slate-400 leading-tight">PS-07 · Cloud Identity &amp; Excessive Permission Detection</div>
+      </div>
+      <span id="sourcePill" class="ml-3 hidden sm:inline-flex items-center gap-1.5 text-xs bg-ink-700 border border-ink-600 rounded-full px-3 py-1 font-mono text-slate-300">loading…</span>
+    </div>
+    <div class="flex flex-wrap items-center gap-2 text-sm">
+      <button data-sample="default" class="sample-btn btn">iam-small.json</button>
+      <button data-sample="multihop" class="sample-btn btn">Multi-hop demo</button>
+      <label class="btn btn-primary cursor-pointer">
+        <svg viewBox="0 0 24 24" class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 16V4m0 0l-4 4m4-4l4 4M4 20h16"/></svg>
+        Upload JSON<input id="fileInput" type="file" accept=".json,application/json" class="hidden">
+      </label>
+      <div class="relative" id="exportWrap">
+        <button id="exportBtn" class="btn">Export report ▾</button>
+        <div id="exportMenu" class="hidden absolute right-0 mt-2 w-56 bg-ink-800 border border-ink-600 rounded-xl shadow-2xl p-1 z-50">
+          <a data-fmt="html" class="export-link">HTML executive + technical report</a>
+          <a data-fmt="md" class="export-link">Markdown report</a>
+          <a data-fmt="json" class="export-link">JSON (full findings)</a>
+          <a data-fmt="sarif" class="export-link">SARIF 2.1.0 (CI/CD)</a>
+          <a id="applyScript" class="export-link">apply-remediations.sh</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-[1600px] mx-auto px-4 pb-16">
+  <!-- posture banner -->
+  <section id="posture" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 mt-5"></section>
+  <div id="telemetryNote" class="hidden mt-3 text-sm rounded-xl border border-amber-500/30 bg-amber-500/10 text-amber-200 px-4 py-2"></div>
+
+  <!-- tabs -->
+  <nav class="mt-6 flex gap-1 border-b border-ink-600 text-sm overflow-x-auto" id="tabs">
+    <button data-tab="graph" class="tab active">Attack Graph</button>
+    <button data-tab="findings" class="tab">Findings <span id="findCount" class="badge-count"></span></button>
+    <button data-tab="identities" class="tab">Identities &amp; Blast Radius</button>
+    <button data-tab="remediation" class="tab">Least-Privilege Fixes <span id="remCount" class="badge-count"></span></button>
+  </nav>
+
+  <!-- GRAPH -->
+  <section data-panel="graph" class="panel mt-4 grid grid-cols-1 xl:grid-cols-[1fr_420px] gap-4">
+    <div class="card p-0 overflow-hidden flex flex-col">
+      <div class="flex flex-wrap items-center gap-2 px-3 py-2 border-b border-ink-600 bg-ink-850">
+        <button id="hlToggle" class="btn btn-danger">
+          <span class="w-2 h-2 rounded-full bg-rose-400 animate-pulse"></span> Highlight Attack Paths
+        </button>
+        <button id="fitBtn" class="btn">Fit</button>
+        <select id="layoutSel" class="btn bg-ink-700">
+          <option value="tiers">Tiered layout</option>
+          <option value="cose">Force layout</option>
+        </select>
+        <label class="flex items-center gap-1.5 text-xs text-slate-400 ml-1"><input id="edgeLabels" type="checkbox" class="accent-sky-500"> edge labels</label>
+        <div class="ml-auto flex flex-wrap gap-3 text-[11px] text-slate-400" id="legend">
+          <span class="lg"><i style="background:#ef4444"></i>Critical / Admin</span>
+          <span class="lg"><i style="background:#f97316"></i>Cross-account / Warning</span>
+          <span class="lg"><i style="background:#3b82f6"></i>Identity</span>
+          <span class="lg"><i style="background:#22c55e"></i>Resource</span>
+          <span class="lg"><i style="background:#64748b"></i>Policy</span>
+        </div>
+      </div>
+      <div class="relative flex-1">
+        <div id="cy" class="w-full h-[640px] bg-[radial-gradient(ellipse_at_top,_#121a35,_#0b1020_70%)]"></div>
+        <div class="absolute bottom-2 left-3 text-[10px] text-slate-500 pointer-events-none" id="tierLabels"></div>
+      </div>
+    </div>
+    <div class="flex flex-col gap-4 min-w-0">
+      <div class="card" id="inspector">
+        <div class="text-slate-400 text-sm">Click any node to inspect effective permissions, blast radius and trust relationships.</div>
+      </div>
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="font-semibold">Attack paths</h3>
+          <span class="text-xs text-slate-400" id="pathCount"></span>
+        </div>
+        <div id="pathList" class="flex flex-col gap-2 max-h-[420px] overflow-auto pr-1"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINDINGS -->
+  <section data-panel="findings" class="panel hidden mt-4">
+    <div class="card">
+      <div class="flex flex-wrap gap-2 items-center mb-3">
+        <div id="sevFilters" class="flex flex-wrap gap-1.5"></div>
+        <select id="catFilter" class="btn bg-ink-700"><option value="">All categories</option></select>
+        <select id="expFilter" class="btn bg-ink-700">
+          <option value="">Any exploitability</option><option>confirmed</option><option>conditional</option><option>latent</option><option>informational</option>
+        </select>
+        <input id="searchBox" placeholder="Search identity, policy, action, rule…" class="btn bg-ink-700 flex-1 min-w-[220px] text-left">
+      </div>
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm" id="findingsTable">
+          <thead class="text-[11px] uppercase tracking-wide text-slate-400 text-left">
+            <tr><th class="th">ID</th><th class="th">Severity</th><th class="th">Rule</th><th class="th">Finding</th><th class="th">Identity</th>
+              <th class="th">Policy / Sid</th><th class="th">Action</th><th class="th">Resource</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- IDENTITIES -->
+  <section data-panel="identities" class="panel hidden mt-4">
+    <div id="identityGrid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3"></div>
+  </section>
+
+  <!-- REMEDIATION -->
+  <section data-panel="remediation" class="panel hidden mt-4 grid grid-cols-1 lg:grid-cols-[340px_1fr] gap-4">
+    <div id="remList" class="flex flex-col gap-2"></div>
+    <div id="remDetail" class="card min-w-0"></div>
+  </section>
+</main>
+
+<!-- evidence drawer -->
+<div id="drawerBack" class="hidden fixed inset-0 bg-black/50 z-40"></div>
+<aside id="drawer" class="fixed top-0 right-0 h-full w-full lg:w-[62vw] max-w-[1100px] bg-ink-850 border-l border-ink-600 z-50 translate-x-full transition-transform duration-300 overflow-y-auto">
+  <div id="drawerBody" class="p-6"></div>
+</aside>
+
+<div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 rounded-xl text-sm shadow-2xl"></div>
+<div id="loading" class="fixed inset-0 z-[70] grid place-items-center bg-ink-900/80">
+  <div class="flex items-center gap-3 text-slate-300"><span class="spinner"></span> Analysing IAM snapshot…</div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

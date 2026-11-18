@@ -1,0 +1,33 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "PassOnlyApprovedRole",
+      "Effect": "Allow",
+      "Action": "iam:PassRole",
+      "Resource": [
+        "arn:aws:iam::182102543085:role/<APPROVED_EXECUTION_ROLE>"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "iam:PassedToService": "lambda.amazonaws.com"
+        }
+      }
+    },
+    {
+      "Sid": "ScopedLambda",
+      "Effect": "Allow",
+      "Action": [
+        "lambda:CreateFunction"
+      ],
+      "Resource": [
+        "arn:aws:lambda:<REGION>:182102543085:function:ci-deploy-*"
+      ],
+      "Condition": {
+        "StringEquals": {
+          "aws:ResourceAccount": "182102543085"
+        }
+      }
+    }
+  ]
+}

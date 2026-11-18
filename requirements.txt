@@ -1,0 +1,9 @@
+fastapi>=0.110
+uvicorn>=0.27
+networkx>=3.2
+python-multipart>=0.0.9
+# tests
+pytest>=8.0
+httpx>=0.27
+# optional: live AWS collection (python cli.py collect)
+# boto3>=1.34

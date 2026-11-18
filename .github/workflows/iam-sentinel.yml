@@ -1,0 +1,24 @@
+# Example CI/CD gate: fail the pipeline on HIGH+ IAM risk and publish SARIF to GitHub code scanning.
+name: iam-sentinel
+on: [push, pull_request]
+permissions:
+  contents: read
+  security-events: write
+jobs:
+  iam-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install -r requirements.txt
+      - run: python -m pytest -q
+      # NOTE: iam-small.json is intentionally vulnerable, so this gate is expected to FAIL (exit 1) on it.
+      - name: Scan IAM export
+        run: python cli.py scan iam-small.json --format sarif -o iam.sarif --also html=iam-report.html --fail-on HIGH
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: iam.sarif }
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: iam-report, path: iam-report.html }

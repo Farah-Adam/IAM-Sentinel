@@ -1,0 +1,722 @@
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "IAM Sentinel",
+          "version": "1.0.0",
+          "informationUri": "https://github.com/",
+          "rules": [
+            {
+              "id": "ADMIN-001",
+              "name": "ADMIN001",
+              "shortDescription": {
+                "text": "Full administrator access (Action \"*\" on Resource \"*\") via AWS managed policy AdministratorAccess"
+              },
+              "fullDescription": {
+                "text": "The statement grants every action on every resource in the account. Holders can create users and keys, rewrite any policy, read all data, disable CloudTrail/GuardDuty and delete resources."
+              },
+              "help": {
+                "text": "Remove standing admin. Use role-based, MFA-gated, time-bound elevation (IAM Identity Center permission set or an assumable break-glass role) and protect security tooling with explicit Deny."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Excessive Privilege",
+                  "T1078.004",
+                  "T1098",
+                  "T1562.008"
+                ],
+                "security-severity": "9.5"
+              }
+            },
+            {
+              "id": "HYG-003",
+              "name": "HYG003",
+              "shortDescription": {
+                "text": "Administrator is a long-lived IAM user"
+              },
+              "fullDescription": {
+                "text": "test-admin is an IAM user with full administrator rights. IAM users carry long-lived credentials (password / access keys)."
+              },
+              "help": {
+                "text": "Use IAM Identity Center or an assumable admin role with MFA and short sessions; remove the user's direct admin policy."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Hygiene",
+                  "T1078.004"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "PRIV-015",
+              "name": "PRIV015",
+              "shortDescription": {
+                "text": "Privilege escalation: PassRole to new Lambda function"
+              },
+              "fullDescription": {
+                "text": "Can create a Lambda function that executes attacker code with any passable execution role. Required permissions present: iam:PassRole, lambda:CreateFunction."
+              },
+              "help": {
+                "text": "Scope iam:PassRole to the exact execution role ARN(s) and add Condition StringEquals iam:PassedToService = lambda.amazonaws.com; scope the compute action to a function/instance naming prefix."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Privilege Escalation",
+                  "T1648",
+                  "T1098"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "RES-001",
+              "name": "RES001",
+              "shortDescription": {
+                "text": "Sensitive action(s) allowed on Resource \"*\" (Compute / code execution, Privilege escalation primitive)"
+              },
+              "fullDescription": {
+                "text": "2 sensitive action(s) apply to every resource: iam:PassRole, lambda:CreateFunction."
+              },
+              "help": {
+                "text": "Scope Resource to the specific ARNs (bucket, function, parameter path, role) and add guardrail conditions (aws:ResourceAccount, iam:PassedToService, aws:MultiFactorAuthPresent)."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Unscoped Resource",
+                  "T1098",
+                  "T1648"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "WILD-002",
+              "name": "WILD002",
+              "shortDescription": {
+                "text": "Service-wide wildcard s3:* on all resources"
+              },
+              "fullDescription": {
+                "text": "s3:* grants every current and future API of the service, including 12 known-sensitive action(s) such as s3:DeleteBucket, s3:DeleteBucketPolicy, s3:DeleteObject, s3:DeleteObjectVersion, s3:GetObject, s3:GetObjectVersion."
+              },
+              "help": {
+                "text": "Replace the service wildcard with the specific read/write actions the workload needs and scope Resource to named ARNs."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Wildcard Permission",
+                  "T1530",
+                  "T1485"
+                ],
+                "security-severity": "8.0"
+              }
+            },
+            {
+              "id": "HYG-002",
+              "name": "HYG002",
+              "shortDescription": {
+                "text": "Recently created privileged user (created < 24 hours ago)"
+              },
+              "fullDescription": {
+                "text": "test-admin was created 2026-11-17 13:12 UTC and already holds high-risk permissions."
+              },
+              "help": {
+                "text": "Verify the creator in CloudTrail (CreateUser/CreateRole events) and the business justification."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Hygiene",
+                  "T1136.003"
+                ],
+                "security-severity": "5.5"
+              }
+            },
+            {
+              "id": "HYG-001",
+              "name": "HYG001",
+              "shortDescription": {
+                "text": "Permissions granted through inline user policy"
+              },
+              "fullDescription": {
+                "text": "test-passrole has inline policies: ci-deploy. Inline user policies are invisible in policy inventories, cannot be reused or versioned, and bypass group-based access reviews."
+              },
+              "help": {
+                "text": "Move permissions to a versioned customer-managed policy attached to a group or role."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Hygiene",
+                  "T1098"
+                ],
+                "security-severity": "3.0"
+              }
+            },
+            {
+              "id": "READ-001",
+              "name": "READ001",
+              "shortDescription": {
+                "text": "Very broad permission surface: 989 actions across 190 services on \"*\""
+              },
+              "fullDescription": {
+                "text": "A single statement grants 989 actions across 190 services on all resources (mostly read/list)."
+              },
+              "help": {
+                "text": "Confirm the identity really needs account-wide visibility; otherwise restrict to the services in use."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Excessive Privilege",
+                  "T1580"
+                ],
+                "security-severity": "3.0"
+              }
+            },
+            {
+              "id": "TELEM-001",
+              "name": "TELEM001",
+              "shortDescription": {
+                "text": "Usage telemetry absent - dormancy cannot be assessed for some identities"
+              },
+              "fullDescription": {
+                "text": "The export has no PasswordLastUsed / credential report data for 3 user(s): test-admin, test-passrole, test-s3-all. get-account-authorization-details does not include user login or access-key activity."
+              },
+              "help": {
+                "text": "Run `python cli.py collect` (adds the IAM credential report) or merge `aws iam get-credential-report` output into the export under the key \"CredentialReport\"."
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "iam",
+                  "Stale / Unused Identity"
+                ],
+                "security-severity": "0.0"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "ADMIN-001",
+          "level": "error",
+          "message": {
+            "text": "[CRITICAL] Full administrator access (Action \"*\" on Resource \"*\") via AWS managed policy AdministratorAccess \u2014 test-admin. Remove standing admin. Use role-based, MFA-gated, time-bound elevation (IAM Identity Center permission set or an assumable break-glass role) and protect security tooling with explicit Deny."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-admin / AdministratorAccess",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-admin",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "ADMIN-001|arn:aws:iam::182102543085:user/test-admin|arn:aws:iam::aws:policy/AdministratorAccess|0"
+          },
+          "properties": {
+            "severity": "CRITICAL",
+            "exploitability": "confirmed",
+            "actions": [
+              "*"
+            ],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-001"
+          }
+        },
+        {
+          "ruleId": "HYG-003",
+          "level": "error",
+          "message": {
+            "text": "[HIGH] Administrator is a long-lived IAM user \u2014 test-admin. Use IAM Identity Center or an assumable admin role with MFA and short sessions; remove the user's direct admin policy."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-admin",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-admin",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "HYG-003|arn:aws:iam::182102543085:user/test-admin|None|None"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "exploitability": "confirmed",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        },
+        {
+          "ruleId": "PRIV-015",
+          "level": "error",
+          "message": {
+            "text": "[HIGH] Privilege escalation: PassRole to new Lambda function \u2014 test-passrole. Scope iam:PassRole to the exact execution role ARN(s) and add Condition StringEquals iam:PassedToService = lambda.amazonaws.com; scope the compute action to a function/instance naming prefix."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-passrole / ci-deploy",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-passrole",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "PRIV-015|arn:aws:iam::182102543085:user/test-passrole|inline:arn:aws:iam::182102543085:user/test-passrole:ci-deploy|0"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "exploitability": "latent",
+            "actions": [
+              "iam:PassRole",
+              "lambda:CreateFunction",
+              "(missing) lambda:InvokeFunction"
+            ],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-002"
+          }
+        },
+        {
+          "ruleId": "RES-001",
+          "level": "error",
+          "message": {
+            "text": "[HIGH] Sensitive action(s) allowed on Resource \"*\" (Compute / code execution, Privilege escalation primitive) \u2014 test-passrole. Scope Resource to the specific ARNs (bucket, function, parameter path, role) and add guardrail conditions (aws:ResourceAccount, iam:PassedToService, aws:MultiFactorAuthPresent)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-passrole / ci-deploy",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-passrole",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "RES-001|arn:aws:iam::182102543085:user/test-passrole|inline:arn:aws:iam::182102543085:user/test-passrole:ci-deploy|0"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "exploitability": "confirmed",
+            "actions": [
+              "iam:PassRole",
+              "lambda:CreateFunction"
+            ],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-002"
+          }
+        },
+        {
+          "ruleId": "WILD-002",
+          "level": "error",
+          "message": {
+            "text": "[HIGH] Service-wide wildcard s3:* on all resources \u2014 test-s3-all. Replace the service wildcard with the specific read/write actions the workload needs and scope Resource to named ARNs."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-s3-all / s3-all",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-s3-all",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "WILD-002|arn:aws:iam::182102543085:user/test-s3-all|inline:arn:aws:iam::182102543085:user/test-s3-all:s3-all|0"
+          },
+          "properties": {
+            "severity": "HIGH",
+            "exploitability": "confirmed",
+            "actions": [
+              "s3:*"
+            ],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-003"
+          }
+        },
+        {
+          "ruleId": "HYG-002",
+          "level": "warning",
+          "message": {
+            "text": "[MEDIUM] Recently created privileged user (created < 24 hours ago) \u2014 test-admin. Verify the creator in CloudTrail (CreateUser/CreateRole events) and the business justification."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-admin",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-admin",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "HYG-002|arn:aws:iam::182102543085:user/test-admin|None|None"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "exploitability": "informational",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        },
+        {
+          "ruleId": "HYG-002",
+          "level": "warning",
+          "message": {
+            "text": "[MEDIUM] Recently created privileged user (created < 24 hours ago) \u2014 test-passrole. Verify the creator in CloudTrail (CreateUser/CreateRole events) and the business justification."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-passrole",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-passrole",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "HYG-002|arn:aws:iam::182102543085:user/test-passrole|None|None"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "exploitability": "informational",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        },
+        {
+          "ruleId": "HYG-002",
+          "level": "warning",
+          "message": {
+            "text": "[MEDIUM] Recently created privileged user (created < 24 hours ago) \u2014 test-s3-all. Verify the creator in CloudTrail (CreateUser/CreateRole events) and the business justification."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-s3-all",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-s3-all",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "HYG-002|arn:aws:iam::182102543085:user/test-s3-all|None|None"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "exploitability": "informational",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        },
+        {
+          "ruleId": "RES-001",
+          "level": "warning",
+          "message": {
+            "text": "[MEDIUM] Sensitive action(s) allowed on Resource \"*\" (Credential / secret access) \u2014 connct-with-ssm. Scope Resource to the specific ARNs (bucket, function, parameter path, role) and add guardrail conditions (aws:ResourceAccount, iam:PassedToService, aws:MultiFactorAuthPresent)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "connct-with-ssm / AmazonSSMManagedInstanceCore",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:role/connct-with-ssm",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "RES-001|arn:aws:iam::182102543085:role/connct-with-ssm|arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore|0"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "exploitability": "confirmed",
+            "actions": [
+              "ssm:GetParameter",
+              "ssm:GetParameters"
+            ],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-004"
+          }
+        },
+        {
+          "ruleId": "RES-001",
+          "level": "warning",
+          "message": {
+            "text": "[MEDIUM] Sensitive action(s) allowed on Resource \"*\" (Credential / secret access, Sensitive data read) \u2014 ec2-console-devops-agent-us-east-1. Scope Resource to the specific ARNs (bucket, function, parameter path, role) and add guardrail conditions (aws:ResourceAccount, iam:PassedToService, aws:MultiFactorAuthPresent)."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ec2-console-devops-agent-us-east-1 / AIDevOpsAgentAccessPolicy / AIOPSServiceAccess",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:role/service-role/ec2-console-devops-agent-us-east-1",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "RES-001|arn:aws:iam::182102543085:role/service-role/ec2-console-devops-agent-us-east-1|arn:aws:iam::aws:policy/AIDevOpsAgentAccessPolicy|1"
+          },
+          "properties": {
+            "severity": "MEDIUM",
+            "exploitability": "confirmed",
+            "actions": [
+              "cloudformation:GetTemplate",
+              "eks:AccessKubernetesApi",
+              "logs:FilterLogEvents",
+              "logs:GetLogEvents",
+              "logs:StartQuery"
+            ],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-005"
+          }
+        },
+        {
+          "ruleId": "HYG-001",
+          "level": "note",
+          "message": {
+            "text": "[LOW] Permissions granted through inline user policy \u2014 test-passrole. Move permissions to a versioned customer-managed policy attached to a group or role."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-passrole / ci-deploy",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-passrole",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "HYG-001|arn:aws:iam::182102543085:user/test-passrole|inline:arn:aws:iam::182102543085:user/test-passrole:ci-deploy|None"
+          },
+          "properties": {
+            "severity": "LOW",
+            "exploitability": "informational",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        },
+        {
+          "ruleId": "HYG-001",
+          "level": "note",
+          "message": {
+            "text": "[LOW] Permissions granted through inline user policy \u2014 test-s3-all. Move permissions to a versioned customer-managed policy attached to a group or role."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-s3-all / s3-all",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:user/test-s3-all",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "HYG-001|arn:aws:iam::182102543085:user/test-s3-all|inline:arn:aws:iam::182102543085:user/test-s3-all:s3-all|None"
+          },
+          "properties": {
+            "severity": "LOW",
+            "exploitability": "informational",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        },
+        {
+          "ruleId": "READ-001",
+          "level": "note",
+          "message": {
+            "text": "[LOW] Very broad permission surface: 989 actions across 190 services on \"*\" \u2014 ec2-console-devops-agent-us-east-1. Confirm the identity really needs account-wide visibility; otherwise restrict to the services in use."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "ec2-console-devops-agent-us-east-1 / AIDevOpsAgentAccessPolicy / AIOPSServiceAccess",
+                  "fullyQualifiedName": "arn:aws:iam::182102543085:role/service-role/ec2-console-devops-agent-us-east-1",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "READ-001|arn:aws:iam::182102543085:role/service-role/ec2-console-devops-agent-us-east-1|arn:aws:iam::aws:policy/AIDevOpsAgentAccessPolicy|1"
+          },
+          "properties": {
+            "severity": "LOW",
+            "exploitability": "confirmed",
+            "actions": [],
+            "resources": [
+              "*"
+            ],
+            "remediation": "REM-005"
+          }
+        },
+        {
+          "ruleId": "TELEM-001",
+          "level": "note",
+          "message": {
+            "text": "[INFO] Usage telemetry absent - dormancy cannot be assessed for some identities \u2014 test-admin, test-passrole, test-s3-all. Run `python cli.py collect` (adds the IAM credential report) or merge `aws iam get-credential-report` output into the export under the key \"CredentialReport\"."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "iam-small.json"
+                }
+              },
+              "logicalLocations": [
+                {
+                  "name": "test-admin, test-passrole, test-s3-all",
+                  "fullyQualifiedName": "",
+                  "kind": "resource"
+                }
+              ]
+            }
+          ],
+          "partialFingerprints": {
+            "iamSentinel/v1": "TELEM-001||None|None"
+          },
+          "properties": {
+            "severity": "INFO",
+            "exploitability": "informational",
+            "actions": [],
+            "resources": [],
+            "remediation": null
+          }
+        }
+      ],
+      "properties": {
+        "grade": "F",
+        "score": 39,
+        "account": "182102543085"
+      }
+    }
+  ]
+}
